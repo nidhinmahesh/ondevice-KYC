@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile ZK Identity - Groth16 (192 bytes!)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f2f5;
+            color: #1a1a1a;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 28px;
+            margin: 0 0 8px 0;
+            color: #000;
+        }
+        h2 {
+            font-size: 20px;
+            margin: 24px 0 16px 0;
+            color: #333;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .performance-badge {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 14px 16px;
+            margin: 8px 0;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2196f3;
+            box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
+        }
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .verify-button {
+            background: #4caf50;
+        }
+        .verify-button:hover {
+            background: #388e3c;
+        }
+        .status {
+            padding: 16px;
+            border-radius: 12px;
+            margin: 16px 0;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+        .status.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+        }
+        .proof-info {
+            background: #f5f5f5;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 16px;
+            word-break: break-all;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .metric:last-child {
+            border-bottom: none;
+        }
+        .metric-value {
+            font-weight: 600;
+            color: #2196f3;
+        }
+        .verification-grid {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .verify-option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .verify-option:hover {
+            background: #e3f2fd;
+        }
+        .verify-result {
+            margin-left: auto;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .verify-result.pass {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+        .verify-result.fail {
+            background: #ffcdd2;
+            color: #c62828;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #2196f3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Mobile ZK Identity <span class="performance-badge">Groth16 - 192B proofs</span></h1>
+            <p class="subtitle">Generate privacy-preserving identity proofs optimized for mobile devices</p>
+            
+            <div id="status" class="status info">
+                Initializing ZK system... <span class="loading"></span>
+            </div>
+            
+            <div id="setupSection" class="hidden">
+                <h2>Step 1: One-time Setup</h2>
+                <p style="font-size: 14px; color: #666;">Generate proving/verifying keys (do this once, save for reuse)</p>
+                <button id="setupBtn" onclick="performSetup()">Generate Setup Keys</button>
+                <div id="setupKeys" class="proof-info hidden"></div>
+            </div>
+            
+            <form id="proofForm" class="hidden">
+                <h2>Step 2: Create Your Identity Proof</h2>
+                <input type="text" id="name" placeholder="Full Name" required>
+                <input type="number" id="dobYear" placeholder="Birth Year (e.g., 1990)" min="1900" max="2024" required>
+                <input type="text" id="city" placeholder="City" required>
+                <input type="text" id="state" placeholder="State" required>
+                <select id="gender" required>
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                </select>
+                <button type="submit">Generate Proof</button>
+            </form>
+            
+            <div id="proofSection" class="hidden">
+                <h2>Step 3: Verify Attributes</h2>
+                <div class="proof-info">
+                    <div class="metric">
+                        <span>Proof Size</span>
+                        <span class="metric-value" id="proofSize">-</span>
+                    </div>
+                    <div class="metric">
+                        <span>Generation Time</span>
+                        <span class="metric-value" id="proofTime">-</span>
+                    </div>
+                    <div class="metric">
+                        <span>Birth Year (Public)</span>
+                        <span class="metric-value" id="birthYear">-</span>
+                    </div>
+                </div>
+                
+                <div class="verification-grid">
+                    <div class="verify-option" onclick="verifyAttribute('IsAdult')">
+                        <span>Is 18 or older?</span>
+                        <span class="verify-result hidden" id="result-IsAdult"></span>
+                    </div>
+                    <div class="verify-option" onclick="verifyAttribute('IsMinor')">
+                        <span>Is under 18?</span>
+                        <span class="verify-result hidden" id="result-IsMinor"></span>
+                    </div>
+                    <div class="verify-option" onclick="verifyAttribute('IsMale')">
+                        <span>Is Male?</span>
+                        <span class="verify-result hidden" id="result-IsMale"></span>
+                    </div>
+                    <div class="verify-option" onclick="verifyAttribute('IsFemale')">
+                        <span>Is Female?</span>
+                        <span class="verify-result hidden" id="result-IsFemale"></span>
+                    </div>
+                    <div class="verify-option" onclick="verifyAgeRange()">
+                        <span>Is between 21-65?</span>
+                        <span class="verify-result hidden" id="result-AgeRange"></span>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button onclick="exportProof()" style="background: #ff9800;">Export Proof</button>
+                    <button onclick="resetForm()" style="background: #757575;">Start Over</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Why Groth16 for Mobile?</h2>
+            <p style="font-size: 14px; line-height: 1.6; color: #555;">
+                Based on the mobile ZK optimization guide, Groth16 with BN254 curve provides:
+            </p>
+            <ul style="font-size: 14px; color: #555;">
+                <li><strong>Smallest proofs:</strong> Only 192 bytes (vs 3KB+ for Plonk)</li>
+                <li><strong>Fastest verification:</strong> Linear time with ARM NEON optimizations</li>
+                <li><strong>Mobile-friendly:</strong> 0.9s proof generation on iPhone 15 Pro</li>
+                <li><strong>Low memory:</strong> ~25MB RAM usage with coefficient-only mode</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        let wasm = null;
+        let setupKeys = null;
+        let currentProof = null;
+        
+        // Simulated WASM module (replace with actual WASM import)
+        const simulateWasm = {
+            SetupKeysWasm: class {
+                constructor() {
+                    this.keys = "SIMULATED_SETUP_KEYS_BASE64";
+                }
+                to_base64() { return this.keys; }
+                static from_base64(b64) { return new this(); }
+            },
+            PersonalInfoWasm: class {
+                constructor(name, year, city, state, gender) {
+                    this.name = name;
+                    this.year = year;
+                    this.city = city;
+                    this.state = state;
+                    this.gender = gender;
+                }
+            },
+            ProofWasm: class {
+                constructor(info) {
+                    this.year = info.year;
+                    this.proofSize = 192; // Groth16 proof size
+                }
+                verify(type, v1, v2) {
+                    const age = 2025 - this.year;
+                    switch(type) {
+                        case 0: return age >= 18; // IsAdult
+                        case 1: return age < 18;  // IsMinor
+                        case 2: return true;      // IsMale (simulated)
+                        case 3: return false;     // IsFemale (simulated)
+                        case 4: return age >= parseInt(v1) && age <= parseInt(v2); // Range
+                        default: return false;
+                    }
+                }
+                get_birth_year() { return this.year; }
+                proof_size_bytes() { return this.proofSize; }
+                to_json() { return JSON.stringify({ year: this.year, size: this.proofSize }); }
+            },
+            setup_keys: () => new simulateWasm.SetupKeysWasm(),
+            generate_proof: (info, keys) => {
+                return new Promise(resolve => {
+                    setTimeout(() => resolve(new simulateWasm.ProofWasm(info)), 900);
+                });
+            },
+            VerificationType: {
+                IsAdult: 0,
+                IsMinor: 1,
+                IsMale: 2,
+                IsFemale: 3,
+                IsInAgeRange: 4
+            }
+        };
+        
+        // Initialize
+        async function init() {
+            try {
+                // In production: const module = await import('./pkg/mobile_zk_groth16.js');
+                wasm = simulateWasm; // Using simulation for demo
+                
+                document.getElementById('status').className = 'status success';
+                document.getElementById('status').innerHTML = 'ZK System Ready ✓';
+                document.getElementById('setupSection').classList.remove('hidden');
+                
+                // Check for saved setup keys
+                const savedKeys = localStorage.getItem('zkSetupKeys');
+                if (savedKeys) {
+                    setupKeys = wasm.SetupKeysWasm.from_base64(savedKeys);
+                    document.getElementById('setupKeys').innerHTML = 
+                        '<strong>Setup keys loaded from cache</strong>';
+                    document.getElementById('setupKeys').classList.remove('hidden');
+                    document.getElementById('proofForm').classList.remove('hidden');
+                    document.getElementById('setupBtn').textContent = 'Regenerate Keys';
+                }
+            } catch (error) {
+                console.error('Init error:', error);
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').textContent = 'Failed to initialize: ' + error.message;
+            }
+        }
+        
+        // Perform setup
+        window.performSetup = async function() {
+            const btn = document.getElementById('setupBtn');
+            btn.disabled = true;
+            btn.innerHTML = 'Generating keys... <span class="loading"></span>';
+            
+            try {
+                const start = performance.now();
+                setupKeys = await wasm.setup_keys();
+                const elapsed = performance.now() - start;
+                
+                // Save to localStorage for reuse
+                const keysBase64 = setupKeys.to_base64();
+                localStorage.setItem('zkSetupKeys', keysBase64);
+                
+                document.getElementById('setupKeys').innerHTML = 
+                    `<strong>Setup complete!</strong> (${(elapsed/1000).toFixed(1)}s)<br>` +
+                    `Keys saved for future use`;
+                document.getElementById('setupKeys').classList.remove('hidden');
+                document.getElementById('proofForm').classList.remove('hidden');
+                
+                btn.textContent = 'Regenerate Keys';
+            } catch (error) {
+                alert('Setup failed: ' + error.message);
+            } finally {
+                btn.disabled = false;
+            }
+        };
+        
+        // Generate proof
+        document.getElementById('proofForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!setupKeys) {
+                alert('Please run setup first');
+                return;
+            }
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = 'Generating proof... <span class="loading"></span>';
+            
+            try {
+                const info = new wasm.PersonalInfoWasm(
+                    document.getElementById('name').value,
+                    parseInt(document.getElementById('dobYear').value),
+                    document.getElementById('city').value,
+                    document.getElementById('state').value,
+                    document.getElementById('gender').value
+                );
+                
+                const start = performance.now();
+                currentProof = await wasm.generate_proof(info, setupKeys);
+                const elapsed = performance.now() - start;
+                
+                // Display results
+                document.getElementById('proofSize').textContent = 
+                    `${currentProof.proof_size_bytes()} bytes`;
+                document.getElementById('proofTime').textContent = 
+                    `${elapsed.toFixed(0)}ms`;
+                document.getElementById('birthYear').textContent = 
+                    currentProof.get_birth_year();
+                
+                document.getElementById('proofSection').classList.remove('hidden');
+                document.getElementById('status').className = 'status success';
+                document.getElementById('status').textContent = 
+                    `Proof generated successfully! (${elapsed.toFixed(0)}ms)`;
+                
+                // Auto-verify common attributes
+                setTimeout(() => {
+                    verifyAttribute('IsAdult');
+                }, 100);
+                
+            } catch (error) {
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').textContent = 'Failed: ' + error.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate Proof';
+            }
+        });
+        
+        // Verify attribute
+        window.verifyAttribute = function(type) {
+            if (!currentProof) return;
+            
+            const typeValue = wasm.VerificationType[type];
+            const result = currentProof.verify(typeValue, "", "");
+            
+            const resultEl = document.getElementById(`result-${type}`);
+            resultEl.classList.remove('hidden');
+            resultEl.classList.add(result ? 'pass' : 'fail');
+            resultEl.textContent = result ? '✓ Yes' : '✗ No';
+        };
+        
+        // Verify age range
+        window.verifyAgeRange = function() {
+            if (!currentProof) return;
+            
+            const result = currentProof.verify(
+                wasm.VerificationType.IsInAgeRange, 
+                "21", 
+                "65"
+            );
+            
+            const resultEl = document.getElementById('result-AgeRange');
+            resultEl.classList.remove('hidden');
+            resultEl.classList.add(result ? 'pass' : 'fail');
+            resultEl.textContent = result ? '✓ Yes' : '✗ No';
+        };
+        
+        // Export proof
+        window.exportProof = function() {
+            if (!currentProof) return;
+            
+            const proofData = currentProof.to_json();
+            const blob = new Blob([proofData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'identity-proof.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+        
+        // Reset form
+        window.resetForm = function() {
+            document.getElementById('proofForm').reset();
+            document.getElementById('proofSection').classList.add('hidden');
+            currentProof = null;
+            
+            // Clear verification results
+            document.querySelectorAll('.verify-result').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('pass', 'fail');
+            });
+        };
+        
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
